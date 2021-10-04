@@ -10,7 +10,7 @@ module.exports = class PrebuildWebpackPlugin {
   constructor({
     build,
     files = {},
-    watch = () => {},
+    watch = () => { },
     clearCacheOnUpdate = false,
     compilationNameFilter
   } = {}) {
@@ -50,15 +50,6 @@ module.exports = class PrebuildWebpackPlugin {
     // glob returns paths relative to the root, but we want absolute paths, so we join
     // the root on before returning
     return files.map(f => path.join(root, f))
-  }
-
-  // Getting the file that changes per watch trigger is a bit involved when it comes
-  // to getting it out of the webpack compilation object - this abstracts out the process.
-  getChangedFile(compiler) {
-    const { watchFileSystem } = compiler
-    const watcher = watchFileSystem.watcher || watchFileSystem.wfs.watcher
-    const changedFile = Object.keys(watcher.mtimes)
-    return changedFile
   }
 
   // If a compilation name is given, returns whether the current compilation matches
@@ -113,8 +104,13 @@ module.exports = class PrebuildWebpackPlugin {
       if (!this.files.pattern) return Promise.resolve()
 
       // If so, we get the file that was just changed, if there was one changed
-      const changedFile = this.getChangedFile(compiler)
-      if (!changedFile.length) return Promise.resolve()
+      let changedFile;
+      if (compilation.modifiedFiles) {
+        changedFile = Array.from(compilation.modifiedFiles);
+      }
+      if (!changedFile || !changedFile.length) {
+        return Promise.resolve()
+      }
 
       // If the changed file doesn't match the provided pattern, we're done
       const changedMatch = minimatch.match(changedFile, this.files.pattern)
